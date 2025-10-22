@@ -9,7 +9,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use crate::error::UiError;
 
-use crate::components::{Component, Renderer as UIRenderer};
+use crate::components::{View, Renderer as UIRenderer};
 use crate::themes::Theme;
 
 pub struct SDLEngine {
@@ -38,7 +38,7 @@ impl SDLEngine {
         }, redraw_trigger))
     }
 
-    pub fn run(&mut self, mut root_component: Box<dyn Component>, theme: &Theme, redraw_trigger: Rc<RefCell<bool>>) -> Result<(), UiError> {
+    pub fn run(&mut self, mut root_view: Box<dyn View>, theme: &Theme, redraw_trigger: Rc<RefCell<bool>>) -> Result<(), UiError> {
         let mut event_pump = self.sdl_context.event_pump()?;
 
         'running: loop {
@@ -52,7 +52,7 @@ impl SDLEngine {
                     _ => {
                         // Convert SDL event to our Event
                         let ui_event = self.convert_event(&event);
-                        root_component.handle_event(&ui_event);
+                        root_view.handle_event(&ui_event);
                     }
                 }
             }
@@ -61,7 +61,7 @@ impl SDLEngine {
                 self.canvas.set_draw_color(Color::RGB(255, 255, 255));
                 self.canvas.clear();
 
-            root_component.render(&mut SDLRenderer { canvas: &mut self.canvas, theme }, theme, 0.0, 0.0);
+                root_view.render(&mut SDLRenderer { canvas: &mut self.canvas, theme }, theme, 0.0, 0.0);
 
                 self.canvas.present();
                 *redraw_trigger.borrow_mut() = false;

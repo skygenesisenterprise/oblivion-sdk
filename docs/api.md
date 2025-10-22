@@ -2,13 +2,13 @@
 
 Complete API documentation for Oblivion UI.
 
-## Components
+## Views
 
-### Component Trait
+### View Trait
 
 ```rust
-pub trait Component {
-    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme);
+pub trait View {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32);
     fn handle_event(&mut self, event: &Event);
 }
 ```
@@ -22,12 +22,12 @@ pub struct Window {
     pub title: String,
     pub width: u32,
     pub height: u32,
-    pub children: Vec<Box<dyn Component>>,
+    pub children: Vec<Box<dyn View>>,
 }
 
 impl Window {
     pub fn new(title: String, width: u32, height: u32) -> Self
-    pub fn add_child(&mut self, child: Box<dyn Component>)
+    pub fn add_child(&mut self, child: Box<dyn View>)
 }
 ```
 
@@ -37,7 +37,7 @@ Vertical layout container.
 
 ```rust
 pub struct VStack {
-    pub children: Vec<Box<dyn Component>>,
+    pub children: Vec<Box<dyn View>>,
     pub spacing: f32,
     pub padding: f32,
     pub border: f32,
@@ -47,7 +47,7 @@ impl VStack {
     pub fn new(spacing: f32) -> Self
     pub fn padding(self, padding: f32) -> Self
     pub fn border(self, border: f32) -> Self
-    pub fn add_child(&mut self, child: Box<dyn Component>)
+    pub fn add_child(&mut self, child: Box<dyn View>)
 }
 ```
 
@@ -57,7 +57,7 @@ Horizontal layout container.
 
 ```rust
 pub struct HStack {
-    pub children: Vec<Box<dyn Component>>,
+    pub children: Vec<Box<dyn View>>,
     pub spacing: f32,
     pub padding: f32,
     pub border: f32,
@@ -67,7 +67,7 @@ impl HStack {
     pub fn new(spacing: f32) -> Self
     pub fn padding(self, padding: f32) -> Self
     pub fn border(self, border: f32) -> Self
-    pub fn add_child(&mut self, child: Box<dyn Component>)
+    pub fn add_child(&mut self, child: Box<dyn View>)
 }
 ```
 
@@ -77,7 +77,7 @@ impl HStack {
 
 ```rust
 pub struct Grid {
-    pub children: Vec<Vec<Option<Box<dyn Component>>>>,
+    pub children: Vec<Vec<Option<Box<dyn View>>>>,
     pub rows: usize,
     pub cols: usize,
     pub spacing: f32,
@@ -85,7 +85,7 @@ pub struct Grid {
 
 impl Grid {
     pub fn new(rows: usize, cols: usize, spacing: f32) -> Self
-    pub fn set_child(&mut self, row: usize, col: usize, child: Box<dyn Component>)
+    pub fn set_child(&mut self, row: usize, col: usize, child: Box<dyn View>)
 }
 ```
 
@@ -95,14 +95,14 @@ Container with border and padding.
 
 ```rust
 pub struct Panel {
-    pub child: Option<Box<dyn Component>>,
+    pub child: Option<Box<dyn View>>,
     pub border_width: f32,
     pub padding: f32,
 }
 
 impl Panel {
     pub fn new(border_width: f32, padding: f32) -> Self
-    pub fn child(self, child: Box<dyn Component>) -> Self
+    pub fn child(self, child: Box<dyn View>) -> Self
 }
 ```
 
@@ -126,19 +126,88 @@ impl Button {
 }
 ```
 
-### Label
+### Text
 
 Text display component.
 
 ```rust
-pub struct Label {
+pub struct Text {
     pub text: Binding<String>,
-    pub padding: f32,
 }
 
-impl Label {
+impl Text {
     pub fn new(text: Binding<String>) -> Self
-    pub fn padding(self, padding: f32) -> Self
+}
+```
+
+### Spacer
+
+Flexible space component.
+
+```rust
+pub struct Spacer {
+    pub min_length: f32,
+}
+
+impl Spacer {
+    pub fn new() -> Self
+    pub fn min_length(self, len: f32) -> Self
+}
+```
+
+### Divider
+
+Visual separator.
+
+```rust
+pub struct Divider {}
+
+impl Divider {
+    pub fn new() -> Self
+}
+```
+
+### Image
+
+Image display component.
+
+```rust
+pub struct Image {
+    pub width: f32,
+    pub height: f32,
+}
+
+impl Image {
+    pub fn new(width: f32, height: f32) -> Self
+}
+```
+
+## Modifiers
+
+### ViewModifier Trait
+
+```rust
+pub trait ViewModifier {
+    fn modify_render(&self, view: &dyn View, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32);
+    fn modify_event(&self, view: &mut dyn View, event: &Event);
+}
+```
+
+### ModifiedContent
+
+```rust
+pub struct ModifiedContent<V: View, M: ViewModifier> {
+    pub view: V,
+    pub modifier: M,
+}
+```
+
+### ViewExt Trait
+
+```rust
+pub trait ViewExt: View + Sized {
+    fn padding(self, p: f32) -> ModifiedContent<Self, PaddingModifier>
+    fn background(self, color: (u8, u8, u8)) -> ModifiedContent<Self, BackgroundModifier>
 }
 ```
 

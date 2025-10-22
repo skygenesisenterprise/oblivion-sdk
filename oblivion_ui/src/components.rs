@@ -1,7 +1,7 @@
 use crate::state::Binding;
 use crate::themes::Theme;
 
-pub trait Component {
+pub trait View {
     fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32);
     fn handle_event(&mut self, event: &Event);
 }
@@ -10,7 +10,7 @@ pub struct Window {
     pub title: String,
     pub width: u32,
     pub height: u32,
-    pub children: Vec<Box<dyn Component>>,
+    pub children: Vec<Box<dyn View>>,
 }
 
 impl Window {
@@ -23,12 +23,12 @@ impl Window {
         }
     }
 
-    pub fn add_child(&mut self, child: Box<dyn Component>) {
+    pub fn add_child(&mut self, child: Box<dyn View>) {
         self.children.push(child);
     }
 }
 
-impl Component for Window {
+impl View for Window {
     fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         // Render window frame
         let mut child_y = y;
@@ -46,7 +46,7 @@ impl Component for Window {
 }
 
 pub struct VStack {
-    pub children: Vec<Box<dyn Component>>,
+    pub children: Vec<Box<dyn View>>,
     pub spacing: f32,
     pub padding: f32,
     pub border: f32,
@@ -72,12 +72,12 @@ impl VStack {
         self
     }
 
-    pub fn add_child(&mut self, child: Box<dyn Component>) {
+    pub fn add_child(&mut self, child: Box<dyn View>) {
         self.children.push(child);
     }
 }
 
-impl Component for VStack {
+impl View for VStack {
     fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         let mut current_y = y + self.padding + self.border;
         for child in &self.children {
@@ -130,7 +130,7 @@ impl Button {
     }
 }
 
-impl Component for Button {
+impl View for Button {
     fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         // Render button rect with border, then text
         renderer.draw_rect(x, y, 100.0, 30.0);
@@ -146,34 +146,31 @@ impl Component for Button {
     }
 }
 
-pub struct Label {
+pub struct Text {
     pub text: Binding<String>,
-    pub padding: f32,
 }
 
-impl Label {
+impl Text {
     pub fn new(text: Binding<String>) -> Self {
-        Label { text, padding: 0.0 }
-    }
-
-    pub fn padding(mut self, padding: f32) -> Self {
-        self.padding = padding;
-        self
+        Text { text }
     }
 }
 
-impl Component for Label {
+impl View for Text {
     fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
-        renderer.draw_text(&self.text.get(), x + self.padding, y + self.padding);
+        renderer.draw_text(&self.text.get(), x, y);
     }
 
     fn handle_event(&mut self, _event: &Event) {
-        // Labels don't handle events
+        // Text doesn't handle events
     }
 }
 
+// Alias for compatibility
+pub type Label = Text;
+
 pub struct HStack {
-    pub children: Vec<Box<dyn Component>>,
+    pub children: Vec<Box<dyn View>>,
     pub spacing: f32,
     pub padding: f32,
     pub border: f32,
@@ -199,12 +196,12 @@ impl HStack {
         self
     }
 
-    pub fn add_child(&mut self, child: Box<dyn Component>) {
+    pub fn add_child(&mut self, child: Box<dyn View>) {
         self.children.push(child);
     }
 }
 
-impl Component for HStack {
+impl View for HStack {
     fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         let mut current_x = x + self.padding + self.border;
         for child in &self.children {
@@ -222,7 +219,7 @@ impl Component for HStack {
 }
 
 pub struct Grid {
-    pub children: Vec<Vec<Option<Box<dyn Component>>>>,
+    pub children: Vec<Vec<Option<Box<dyn View>>>>,
     pub rows: usize,
     pub cols: usize,
     pub spacing: f32,
@@ -246,14 +243,14 @@ impl Grid {
         }
     }
 
-    pub fn set_child(&mut self, row: usize, col: usize, child: Box<dyn Component>) {
+    pub fn set_child(&mut self, row: usize, col: usize, child: Box<dyn View>) {
         if row < self.rows && col < self.cols {
             self.children[row][col] = Some(child);
         }
     }
 }
 
-impl Component for Grid {
+impl View for Grid {
     fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         for (row_idx, row) in self.children.iter().enumerate() {
             for (col_idx, child_opt) in row.iter().enumerate() {
@@ -278,7 +275,7 @@ impl Component for Grid {
 }
 
 pub struct Panel {
-    pub child: Option<Box<dyn Component>>,
+    pub child: Option<Box<dyn View>>,
     pub border_width: f32,
     pub padding: f32,
 }
@@ -292,13 +289,13 @@ impl Panel {
         }
     }
 
-    pub fn child(mut self, child: Box<dyn Component>) -> Self {
+    pub fn child(mut self, child: Box<dyn View>) -> Self {
         self.child = Some(child);
         self
     }
 }
 
-impl Component for Panel {
+impl View for Panel {
     fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         // Render border
         renderer.draw_rect(x, y, 200.0, 200.0);
@@ -333,7 +330,7 @@ impl Toggle {
     }
 }
 
-impl Component for Toggle {
+impl View for Toggle {
     fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         // Render toggle switch
         let state = if self.is_on.get() { "ON" } else { "OFF" };
@@ -362,7 +359,7 @@ impl Input {
     }
 }
 
-impl Component for Input {
+impl View for Input {
     fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         // Render input field with text
         let text = if self.text.get().is_empty() { &self.placeholder } else { &self.text.get() };
@@ -419,7 +416,7 @@ impl Slider {
     }
 }
 
-impl Component for Slider {
+impl View for Slider {
     fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         // Render slider bar and knob
         renderer.draw_rect(x, y + 10.0, 100.0, 5.0); // Bar
@@ -458,7 +455,7 @@ impl MenuBar {
     }
 }
 
-impl Component for MenuBar {
+impl View for MenuBar {
     fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         let mut current_x = x;
         for item in &self.items {
@@ -479,11 +476,145 @@ impl Component for MenuBar {
     }
 }
 
+pub struct Spacer {
+    pub min_length: f32,
+}
+
+impl Spacer {
+    pub fn new() -> Self {
+        Spacer { min_length: 10.0 }
+    }
+
+    pub fn min_length(mut self, len: f32) -> Self {
+        self.min_length = len;
+        self
+    }
+}
+
+impl View for Spacer {
+    fn render(&self, _renderer: &mut dyn Renderer, _theme: &Theme, _x: f32, _y: f32) {
+        // Spacer doesn't render anything
+    }
+
+    fn handle_event(&mut self, _event: &Event) {
+        // No events
+    }
+}
+
+pub struct Divider {}
+
+impl Divider {
+    pub fn new() -> Self {
+        Divider {}
+    }
+}
+
+impl View for Divider {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        renderer.draw_rect(x, y, 200.0, 1.0); // Horizontal line
+    }
+
+    fn handle_event(&mut self, _event: &Event) {
+        // No events
+    }
+}
+
+pub struct Image {
+    pub width: f32,
+    pub height: f32,
+}
+
+impl Image {
+    pub fn new(width: f32, height: f32) -> Self {
+        Image { width, height }
+    }
+}
+
+impl View for Image {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        renderer.draw_rect(x, y, self.width, self.height); // Placeholder
+    }
+
+    fn handle_event(&mut self, _event: &Event) {
+        // No events
+    }
+}
+
 // Placeholder for Renderer trait
 pub trait Renderer {
     fn draw_text(&mut self, text: &str, x: f32, y: f32);
     fn draw_rect(&mut self, x: f32, y: f32, w: f32, h: f32);
 }
+
+// ViewModifier trait for SwiftUI-like modifiers
+pub trait ViewModifier {
+    fn modify_render(&self, view: &dyn View, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32);
+    fn modify_event(&self, view: &mut dyn View, event: &Event);
+}
+
+pub struct ModifiedContent<V: View, M: ViewModifier> {
+    pub view: V,
+    pub modifier: M,
+}
+
+impl<V: View, M: ViewModifier> View for ModifiedContent<V, M> {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        self.modifier.modify_render(&self.view, renderer, theme, x, y);
+    }
+
+    fn handle_event(&mut self, event: &Event) {
+        self.modifier.modify_event(&mut self.view, event);
+    }
+}
+
+// Common modifiers
+pub struct PaddingModifier {
+    pub padding: f32,
+}
+
+impl ViewModifier for PaddingModifier {
+    fn modify_render(&self, view: &dyn View, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        view.render(renderer, theme, x + self.padding, y + self.padding);
+    }
+
+    fn modify_event(&self, view: &mut dyn View, event: &Event) {
+        view.handle_event(event);
+    }
+}
+
+pub struct BackgroundModifier {
+    pub color: (u8, u8, u8),
+}
+
+impl ViewModifier for BackgroundModifier {
+    fn modify_render(&self, view: &dyn View, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        renderer.draw_rect(x, y, 100.0, 30.0); // Placeholder size
+        view.render(renderer, theme, x, y);
+    }
+
+    fn modify_event(&self, view: &mut dyn View, event: &Event) {
+        view.handle_event(event);
+    }
+}
+
+// Extension trait for modifiers
+pub trait ViewExt: View + Sized {
+    fn padding(self, p: f32) -> ModifiedContent<Self, PaddingModifier> {
+        ModifiedContent {
+            view: self,
+            modifier: PaddingModifier { padding: p },
+        }
+    }
+
+    fn background(self, color: (u8, u8, u8)) -> ModifiedContent<Self, BackgroundModifier> {
+        ModifiedContent {
+            view: self,
+            modifier: BackgroundModifier { color },
+        }
+    }
+}
+
+impl<V: View> ViewExt for V {}
 
 // Placeholder for Event
 pub enum Event {
