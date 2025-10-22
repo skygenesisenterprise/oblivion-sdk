@@ -1,9 +1,81 @@
-use crate::state::Binding;
+use crate::state::{Binding, State};
 use crate::themes::Theme;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 pub trait View {
     fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32);
     fn handle_event(&mut self, event: &Event);
+    fn update(&mut self, _dt: f64) {}
+}
+
+pub struct AnimatedView {
+    pub view: Box<dyn View>,
+    pub offset_x: f32,
+    pub start_offset: f32,
+    pub end_offset: f32,
+    pub duration: f64,
+    pub elapsed: f64,
+}
+
+impl AnimatedView {
+    pub fn new(view: Box<dyn View>, start_offset: f32, end_offset: f32, duration: f64) -> Self {
+        AnimatedView {
+            view,
+            offset_x: start_offset,
+            start_offset,
+            end_offset,
+            duration,
+            elapsed: 0.0,
+        }
+    }
+}
+
+impl View for AnimatedView {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        self.view.render(renderer, theme, x + self.offset_x, y);
+    }
+
+    fn handle_event(&mut self, event: &Event) {
+        self.view.handle_event(event);
+    }
+
+    fn update(&mut self, dt: f64) {
+        self.elapsed += dt;
+        let t = (self.elapsed / self.duration).min(1.0);
+        self.offset_x = self.start_offset + (self.end_offset - self.start_offset) * t as f32;
+    }
+}
+
+pub struct ForEach {
+    pub views: Vec<Box<dyn View>>,
+}
+
+impl ForEach {
+    pub fn new<I, F>(iter: I, mut f: F) -> Self
+    where
+        I: IntoIterator,
+        F: FnMut(I::Item) -> Box<dyn View>,
+    {
+        let views = iter.into_iter().map(f).collect();
+        ForEach { views }
+    }
+}
+
+impl View for ForEach {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        let mut current_y = y;
+        for view in &self.views {
+            view.render(renderer, theme, x, current_y);
+            current_y += 50.0; // Placeholder height
+        }
+    }
+
+    fn handle_event(&mut self, event: &Event) {
+        for view in &mut self.views {
+            view.handle_event(event);
+        }
+    }
 }
 
 pub struct Window {
@@ -628,6 +700,78 @@ impl View for Canvas {
     }
 }
 
+pub struct ScrollView {
+    pub content: Box<dyn View>,
+    pub scroll_offset: Binding<f32>,
+    pub width: f32,
+    pub height: f32,
+}
+
+impl ScrollView {
+    pub fn new(content: Box<dyn View>, width: f32, height: f32) -> Self {
+        ScrollView {
+            content,
+            scroll_offset: State::new(0.0, Rc::new(RefCell::new(false))).binding(),
+            width,
+            height,
+        }
+    }
+}
+
+impl View for ScrollView {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        // Render content at offset
+        self.content.render(renderer, theme, x, y - self.scroll_offset.get());
+        // Render scrollbar placeholder
+        renderer.draw_rect(x + self.width - 10.0, y, 10.0, self.height);
+    }
+
+    fn handle_event(&mut self, event: &Event) {
+        match event {
+            Event::KeyDown(key) => {
+                if *key == sdl2::keyboard::Keycode::Up {
+                    let current = self.scroll_offset.get();
+                    self.scroll_offset.set((current - 10.0).max(0.0));
+                } else if *key == sdl2::keyboard::Keycode::Down {
+                    let current = self.scroll_offset.get();
+                    self.scroll_offset.set(current + 10.0);
+                }
+            }
+            _ => self.content.handle_event(event),
+        }
+    }
+}
+
+pub struct GeometryReader<F> {
+    pub builder: F,
+}
+
+impl<F> GeometryReader<F>
+where
+    F: Fn(f32, f32) -> Box<dyn View>,
+{
+    pub fn new(builder: F) -> Self {
+        GeometryReader { builder }
+    }
+}
+
+impl<F> View for GeometryReader<F>
+where
+    F: Fn(f32, f32) -> Box<dyn View>,
+{
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        // Assume size, in real impl get from layout
+        let width = 400.0;
+        let height = 300.0;
+        let child = (self.builder)(width, height);
+        child.render(renderer, theme, x, y);
+    }
+
+    fn handle_event(&mut self, event: &Event) {
+        // For simplicity, no event handling
+    }
+}
+
 pub struct Spacer {
     pub min_length: f32,
 }
@@ -781,6 +925,37 @@ impl ViewModifier for ForegroundColorModifier {
     }
 }
 
+pub struct CornerRadiusModifier {
+    pub radius: f32,
+}
+
+impl ViewModifier for CornerRadiusModifier {
+    fn modify_render(&self, view: &dyn View, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        // Placeholder: render as rect
+        view.render(renderer, theme, x, y);
+    }
+
+    fn modify_event(&self, view: &mut dyn View, event: &Event) {
+        view.handle_event(event);
+    }
+}
+
+pub struct ShadowModifier {
+    pub radius: f32,
+    pub color: (u8, u8, u8),
+}
+
+impl ViewModifier for ShadowModifier {
+    fn modify_render(&self, view: &dyn View, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        // Placeholder: render shadow then view
+        view.render(renderer, theme, x, y);
+    }
+
+    fn modify_event(&self, view: &mut dyn View, event: &Event) {
+        view.handle_event(event);
+    }
+}
+
 // Extension trait for modifiers
 pub trait ViewExt: View + Sized {
     fn padding(self, p: f32) -> ModifiedContent<Self, PaddingModifier> {
@@ -808,6 +983,20 @@ pub trait ViewExt: View + Sized {
         ModifiedContent {
             view: self,
             modifier: ForegroundColorModifier { color },
+        }
+    }
+
+    fn corner_radius(self, radius: f32) -> ModifiedContent<Self, CornerRadiusModifier> {
+        ModifiedContent {
+            view: self,
+            modifier: CornerRadiusModifier { radius },
+        }
+    }
+
+    fn shadow(self, radius: f32, color: (u8, u8, u8)) -> ModifiedContent<Self, ShadowModifier> {
+        ModifiedContent {
+            view: self,
+            modifier: ShadowModifier { radius, color },
         }
     }
 }

@@ -40,8 +40,15 @@ impl SDLEngine {
 
     pub fn run(&mut self, mut root_view: Box<dyn View>, theme: &Theme, redraw_trigger: Rc<RefCell<bool>>) -> Result<(), UiError> {
         let mut event_pump = self.sdl_context.event_pump()?;
+        let mut last_time = std::time::Instant::now();
 
         'running: loop {
+            let now = std::time::Instant::now();
+            let dt = now.duration_since(last_time).as_secs_f64();
+            last_time = now;
+
+            root_view.update(dt);
+
             for event in event_pump.poll_iter() {
                 match event {
                     Event::Quit { .. }

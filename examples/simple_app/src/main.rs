@@ -1,4 +1,4 @@
-use oblivion_ui::components::{Window, VStack, Button, Text, View};
+use oblivion_ui::components::{Window, VStack, Button, Text, View, AnimatedView};
 use oblivion_ui::state::State;
 use oblivion_ui::rendering::SDLEngine;
 use oblivion_ui::themes::Theme;
@@ -23,7 +23,8 @@ fn main() -> Result<(), UiError> {
             counter.set((current + 1).to_string());
         })
         .padding(10.0);
-    vstack.add_child(Box::new(button));
+    let animated_button = AnimatedView::new(Box::new(button), -200.0, 0.0, 2.0);
+    vstack.add_child(Box::new(animated_button));
 
     window.add_child(Box::new(vstack));
 

@@ -352,6 +352,57 @@ impl Canvas {
 }
 ```
 
+### ScrollView
+
+Scrollable content area.
+
+```rust
+pub struct ScrollView {
+    pub content: Box<dyn View>,
+    pub scroll_offset: Binding<f32>,
+    pub width: f32,
+    pub height: f32,
+}
+
+impl ScrollView {
+    pub fn new(content: Box<dyn View>, width: f32, height: f32) -> Self
+}
+```
+
+### GeometryReader
+
+Provides geometry to child builder.
+
+```rust
+pub struct GeometryReader<F> {
+    pub builder: F,
+}
+
+impl<F> GeometryReader<F>
+where
+    F: Fn(f32, f32) -> Box<dyn View>,
+{
+    pub fn new(builder: F) -> Self
+}
+```
+
+## Modifiers
+
+### ViewExt Trait
+
+Extension methods for modifiers.
+
+```rust
+pub trait ViewExt: View + Sized {
+    fn padding(self, p: f32) -> ModifiedContent<Self, PaddingModifier>
+    fn background(self, color: (u8, u8, u8)) -> ModifiedContent<Self, BackgroundModifier>
+    fn frame(self, width: f32, height: f32) -> ModifiedContent<Self, FrameModifier>
+    fn foreground_color(self, color: (u8, u8, u8)) -> ModifiedContent<Self, ForegroundColorModifier>
+    fn corner_radius(self, radius: f32) -> ModifiedContent<Self, CornerRadiusModifier>
+    fn shadow(self, radius: f32, color: (u8, u8, u8)) -> ModifiedContent<Self, ShadowModifier>
+}
+```
+
 ## Integration
 
 ### SDLEngine

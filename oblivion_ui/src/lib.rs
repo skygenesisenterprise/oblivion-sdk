@@ -8,6 +8,7 @@ pub mod rso;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use components::View;
 
     #[test]
     fn test_state() {
@@ -26,5 +27,20 @@ mod tests {
         assert_eq!(binding.get(), "hello");
         binding.set("world".to_string());
         assert_eq!(state.get(), "world");
+    }
+
+    #[test]
+    fn test_animated_view() {
+        let redraw = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let state = state::State::new("test".to_string(), redraw);
+        let text = components::Text::new(state.binding());
+        let mut animated = components::AnimatedView::new(Box::new(text), 0.0, 100.0, 2.0);
+        assert_eq!(animated.offset_x, 0.0);
+        animated.update(1.0);
+        assert_eq!(animated.offset_x, 50.0);
+        animated.update(1.0);
+        assert_eq!(animated.offset_x, 100.0);
+        animated.update(1.0);
+        assert_eq!(animated.offset_x, 100.0);
     }
 }

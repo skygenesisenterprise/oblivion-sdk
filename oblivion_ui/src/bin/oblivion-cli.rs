@@ -79,10 +79,3 @@ oblivion_ui = {{ path = "../oblivion_ui" }}
     println!("Project {} created successfully!", name);
     println!("Run 'cd {} && cargo run' to start", name);
 }
-"#;
-
-    fs::write(project_dir.join("src/main.rs"), main_rs).expect("Failed to write main.rs");
-
-    println!("Project {} created successfully!", name);
-    println!("Run 'cd {} && cargo run' to start", name);
-}
