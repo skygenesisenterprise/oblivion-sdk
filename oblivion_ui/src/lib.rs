@@ -3,6 +3,7 @@ pub mod state;
 pub mod rendering;
 pub mod themes;
 pub mod error;
+pub mod rso;
 
 #[cfg(test)]
 mod tests {

@@ -476,6 +476,60 @@ impl View for MenuBar {
     }
 }
 
+pub struct ZStack {
+    pub children: Vec<Box<dyn View>>,
+}
+
+impl ZStack {
+    pub fn new() -> Self {
+        ZStack { children: Vec::new() }
+    }
+
+    pub fn add_child(&mut self, child: Box<dyn View>) {
+        self.children.push(child);
+    }
+}
+
+impl View for ZStack {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        for child in &self.children {
+            child.render(renderer, theme, x, y); // Overlay at same position
+        }
+    }
+
+    fn handle_event(&mut self, event: &Event) {
+        for child in &mut self.children {
+            child.handle_event(event);
+        }
+    }
+}
+
+pub struct List {
+    pub items: Vec<Box<dyn View>>,
+}
+
+impl List {
+    pub fn new(items: Vec<Box<dyn View>>) -> Self {
+        List { items }
+    }
+}
+
+impl View for List {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        let mut current_y = y;
+        for item in &self.items {
+            item.render(renderer, theme, x, current_y);
+            current_y += 30.0; // Item height
+        }
+    }
+
+    fn handle_event(&mut self, event: &Event) {
+        for item in &mut self.items {
+            item.handle_event(event);
+        }
+    }
+}
+
 pub struct Spacer {
     pub min_length: f32,
 }
@@ -597,6 +651,38 @@ impl ViewModifier for BackgroundModifier {
     }
 }
 
+pub struct FrameModifier {
+    pub width: f32,
+    pub height: f32,
+}
+
+impl ViewModifier for FrameModifier {
+    fn modify_render(&self, view: &dyn View, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        // Draw frame
+        renderer.draw_rect(x, y, self.width, self.height);
+        view.render(renderer, theme, x, y);
+    }
+
+    fn modify_event(&self, view: &mut dyn View, event: &Event) {
+        view.handle_event(event);
+    }
+}
+
+pub struct ForegroundColorModifier {
+    pub color: (u8, u8, u8),
+}
+
+impl ViewModifier for ForegroundColorModifier {
+    fn modify_render(&self, view: &dyn View, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        // For now, assume it affects text, but since placeholder, just render
+        view.render(renderer, theme, x, y);
+    }
+
+    fn modify_event(&self, view: &mut dyn View, event: &Event) {
+        view.handle_event(event);
+    }
+}
+
 // Extension trait for modifiers
 pub trait ViewExt: View + Sized {
     fn padding(self, p: f32) -> ModifiedContent<Self, PaddingModifier> {
@@ -610,6 +696,20 @@ pub trait ViewExt: View + Sized {
         ModifiedContent {
             view: self,
             modifier: BackgroundModifier { color },
+        }
+    }
+
+    fn frame(self, width: f32, height: f32) -> ModifiedContent<Self, FrameModifier> {
+        ModifiedContent {
+            view: self,
+            modifier: FrameModifier { width, height },
+        }
+    }
+
+    fn foreground_color(self, color: (u8, u8, u8)) -> ModifiedContent<Self, ForegroundColorModifier> {
+        ModifiedContent {
+            view: self,
+            modifier: ForegroundColorModifier { color },
         }
     }
 }

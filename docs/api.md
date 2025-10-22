@@ -276,6 +276,48 @@ impl MenuBar {
 }
 ```
 
+### ZStack
+
+Z-axis stack for overlaying views.
+
+```rust
+pub struct ZStack {
+    pub children: Vec<Box<dyn View>>,
+}
+
+impl ZStack {
+    pub fn new() -> Self
+    pub fn add_child(&mut self, child: Box<dyn View>)
+}
+```
+
+### List
+
+Vertical list of views.
+
+```rust
+pub struct List {
+    pub items: Vec<Box<dyn View>>,
+}
+
+impl List {
+    pub fn new(items: Vec<Box<dyn View>>) -> Self
+}
+```
+
+### ViewExt Trait
+
+Extension methods for modifiers.
+
+```rust
+pub trait ViewExt: View + Sized {
+    fn padding(self, p: f32) -> ModifiedContent<Self, PaddingModifier>
+    fn background(self, color: (u8, u8, u8)) -> ModifiedContent<Self, BackgroundModifier>
+    fn frame(self, width: f32, height: f32) -> ModifiedContent<Self, FrameModifier>
+    fn foreground_color(self, color: (u8, u8, u8)) -> ModifiedContent<Self, ForegroundColorModifier>
+}
+```
+
 ## State Management
 
 ### State<T>
