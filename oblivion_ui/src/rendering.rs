@@ -58,17 +58,27 @@ impl SDLEngine {
             }
 
             if *redraw_trigger.borrow() {
-                self.canvas.set_draw_color(Color::RGB(255, 255, 255));
-                self.canvas.clear();
-
-                root_view.render(&mut SDLRenderer { canvas: &mut self.canvas, theme }, theme, 0.0, 0.0);
-
-                self.canvas.present();
+                self.render_view(&*root_view, theme)?;
                 *redraw_trigger.borrow_mut() = false;
             }
         }
 
         Ok(())
+    }
+
+    pub fn render_view(&mut self, view: &dyn View, theme: &Theme) -> Result<(), UiError> {
+        self.canvas.set_draw_color(Color::RGB(255, 255, 255));
+        self.canvas.clear();
+
+        view.render(&mut SDLRenderer { canvas: &mut self.canvas, theme }, theme, 0.0, 0.0);
+
+        self.canvas.present();
+        Ok(())
+    }
+
+    pub fn handle_event(&mut self, sdl_event: &sdl2::event::Event, view: &mut dyn View) {
+        let ui_event = self.convert_event(sdl_event);
+        view.handle_event(&ui_event);
     }
 
     fn convert_event(&self, event: &Event) -> crate::components::Event {

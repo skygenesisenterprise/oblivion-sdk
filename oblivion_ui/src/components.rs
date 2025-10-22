@@ -530,6 +530,104 @@ impl View for List {
     }
 }
 
+pub struct ProgressBar {
+    pub progress: Binding<f32>, // 0.0 to 1.0
+}
+
+impl ProgressBar {
+    pub fn new(progress: Binding<f32>) -> Self {
+        ProgressBar { progress }
+    }
+}
+
+impl View for ProgressBar {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        // Render background
+        renderer.draw_rect(x, y, 200.0, 20.0);
+        // Render progress
+        let progress_width = self.progress.get() * 200.0;
+        renderer.draw_rect(x, y, progress_width, 20.0);
+    }
+
+    fn handle_event(&mut self, _event: &Event) {
+        // Progress bars don't handle events
+    }
+}
+
+pub struct TabView {
+    pub tabs: Vec<String>,
+    pub selected: Binding<usize>,
+    pub content: Vec<Box<dyn View>>,
+}
+
+impl TabView {
+    pub fn new(tabs: Vec<String>, selected: Binding<usize>, content: Vec<Box<dyn View>>) -> Self {
+        TabView { tabs, selected, content }
+    }
+}
+
+impl View for TabView {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        // Render tabs
+        let mut tab_x = x;
+        for (i, tab) in self.tabs.iter().enumerate() {
+            renderer.draw_text(tab, tab_x, y);
+            tab_x += 100.0;
+        }
+        // Render selected content
+        let selected = self.selected.get();
+        if selected < self.content.len() {
+            self.content[selected].render(renderer, theme, x, y + 30.0);
+        }
+    }
+
+    fn handle_event(&mut self, event: &Event) {
+        if let Event::Click { x: click_x, .. } = event {
+            let tab_index = (*click_x / 100.0) as usize;
+            if tab_index < self.tabs.len() {
+                self.selected.set(tab_index);
+            }
+        }
+        // Handle content events
+        let selected = self.selected.get();
+        if selected < self.content.len() {
+            self.content[selected].handle_event(event);
+        }
+    }
+}
+
+pub struct Canvas {
+    pub width: f32,
+    pub height: f32,
+    pub draw_callback: Option<Box<dyn Fn(&mut dyn Renderer)>>,
+}
+
+impl Canvas {
+    pub fn new(width: f32, height: f32) -> Self {
+        Canvas { width, height, draw_callback: None }
+    }
+
+    pub fn on_draw<F: Fn(&mut dyn Renderer) + 'static>(mut self, f: F) -> Self {
+        self.draw_callback = Some(Box::new(f));
+        self
+    }
+}
+
+impl View for Canvas {
+    fn render(&self, renderer: &mut dyn Renderer, _theme: &Theme, x: f32, y: f32) {
+        // Draw border
+        renderer.draw_rect(x, y, self.width, self.height);
+        // Call custom draw
+        if let Some(ref callback) = self.draw_callback {
+            callback(renderer);
+        }
+    }
+
+    fn handle_event(&mut self, _event: &Event) {
+        // Canvas doesn't handle events by default
+    }
+}
+
 pub struct Spacer {
     pub min_length: f32,
 }

@@ -305,6 +305,64 @@ impl List {
 }
 ```
 
+### ProgressBar
+
+Progress indicator.
+
+```rust
+pub struct ProgressBar {
+    pub progress: Binding<f32>,
+}
+
+impl ProgressBar {
+    pub fn new(progress: Binding<f32>) -> Self
+}
+```
+
+### TabView
+
+Tabbed interface.
+
+```rust
+pub struct TabView {
+    pub tabs: Vec<String>,
+    pub selected: Binding<usize>,
+    pub content: Vec<Box<dyn View>>,
+}
+
+impl TabView {
+    pub fn new(tabs: Vec<String>, selected: Binding<usize>, content: Vec<Box<dyn View>>) -> Self
+}
+```
+
+### Canvas
+
+Custom drawing area.
+
+```rust
+pub struct Canvas {
+    pub width: f32,
+    pub height: f32,
+    pub draw_callback: Option<Box<dyn Fn(&mut dyn Renderer)>>,
+}
+
+impl Canvas {
+    pub fn new(width: f32, height: f32) -> Self
+    pub fn on_draw<F>(self, f: F) -> Self where F: Fn(&mut dyn Renderer) + 'static
+}
+```
+
+## Integration
+
+### SDLEngine
+
+```rust
+impl SDLEngine {
+    pub fn render_view(&mut self, view: &dyn View, theme: &Theme) -> Result<(), UiError>
+    pub fn handle_event(&mut self, sdl_event: &sdl2::event::Event, view: &mut dyn View)
+}
+```
+
 ### ViewExt Trait
 
 Extension methods for modifiers.
