@@ -3,12 +3,14 @@ use std::cell::RefCell;
 
 pub struct State<T> {
     value: Rc<RefCell<T>>,
+    redraw_trigger: Rc<RefCell<bool>>,
 }
 
 impl<T> State<T> {
-    pub fn new(initial: T) -> Self {
+    pub fn new(initial: T, redraw_trigger: Rc<RefCell<bool>>) -> Self {
         State {
             value: Rc::new(RefCell::new(initial)),
+            redraw_trigger,
         }
     }
 

@@ -173,6 +173,40 @@ impl Input {
 }
 ```
 
+### Slider
+
+Value slider component.
+
+```rust
+pub struct Slider {
+    pub value: Binding<f32>,
+    pub min: f32,
+    pub max: f32,
+    pub on_change: Option<Box<dyn FnMut(f32)>>,
+}
+
+impl Slider {
+    pub fn new(value: Binding<f32>, min: f32, max: f32) -> Self
+    pub fn on_change<F>(self, f: F) -> Self where F: FnMut(f32) + 'static
+}
+```
+
+### MenuBar
+
+Horizontal menu bar.
+
+```rust
+pub struct MenuBar {
+    pub items: Vec<String>,
+    pub on_select: Option<Box<dyn FnMut(usize)>>,
+}
+
+impl MenuBar {
+    pub fn new(items: Vec<String>) -> Self
+    pub fn on_select<F>(self, f: F) -> Self where F: FnMut(usize) + 'static
+}
+```
+
 ## State Management
 
 ### State<T>
@@ -268,7 +302,8 @@ User interaction events.
 ```rust
 pub enum Event {
     Click { x: f32, y: f32 },
-    Hover { x: f32, y: f32 },
+    MouseMove { x: f32, y: f32 },
+    KeyDown(sdl2::keyboard::Keycode),
     KeyPress(char),
     Drag { dx: f32, dy: f32 },
 }

@@ -1,8 +1,8 @@
 [package]
 name = "oblivion_ui"
-version = "0.1.0"
-edition = "2024"
+version = "1.0.0"
+edition = "2021"
 
 [dependencies]
 sdl2 = "0.36"
-sdl2-ttf = "0.3"
+thiserror = "1.0"

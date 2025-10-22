@@ -2,7 +2,7 @@ use crate::state::Binding;
 use crate::themes::Theme;
 
 pub trait Component {
-    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme);
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32);
     fn handle_event(&mut self, event: &Event);
 }
 
@@ -29,10 +29,12 @@ impl Window {
 }
 
 impl Component for Window {
-    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme) {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         // Render window frame
+        let mut child_y = y;
         for child in &self.children {
-            child.render(renderer, theme);
+            child.render(renderer, theme, x, child_y);
+            child_y += 50.0; // Placeholder height
         }
     }
 
@@ -76,16 +78,15 @@ impl VStack {
 }
 
 impl Component for VStack {
-    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme) {
-        let mut y = self.padding + self.border;
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        let mut current_y = y + self.padding + self.border;
         for child in &self.children {
-            // Position child at y
-            child.render(renderer, theme);
-            y += self.spacing;
+            child.render(renderer, theme, x + self.padding, current_y);
+            current_y += 30.0 + self.spacing; // Placeholder child height
         }
         // Render border if >0
         if self.border > 0.0 {
-            // Draw border rect
+            renderer.draw_rect(x, y, 200.0, current_y - y); // Placeholder width
         }
     }
 
@@ -130,14 +131,14 @@ impl Button {
 }
 
 impl Component for Button {
-    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme) {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         // Render button rect with border, then text
-        renderer.draw_rect(0.0, 0.0, 100.0, 30.0); // Placeholder size
-        renderer.draw_text(&self.label, self.padding, self.padding);
+        renderer.draw_rect(x, y, 100.0, 30.0);
+        renderer.draw_text(&self.label, x + self.padding, y + self.padding);
     }
 
     fn handle_event(&mut self, event: &Event) {
-        if let Event::Click = event {
+        if let Event::Click { .. } = event {
             if let Some(ref mut callback) = self.on_click {
                 callback();
             }
@@ -162,8 +163,8 @@ impl Label {
 }
 
 impl Component for Label {
-    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme) {
-        renderer.draw_text(&self.text.get(), self.padding, self.padding);
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        renderer.draw_text(&self.text.get(), x + self.padding, y + self.padding);
     }
 
     fn handle_event(&mut self, _event: &Event) {
@@ -204,12 +205,11 @@ impl HStack {
 }
 
 impl Component for HStack {
-    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme) {
-        let mut x = self.padding + self.border;
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        let mut current_x = x + self.padding + self.border;
         for child in &self.children {
-            // Position child at x
-            child.render(renderer, theme);
-            x += self.spacing;
+            child.render(renderer, theme, current_x, y + self.padding);
+            current_x += 100.0 + self.spacing; // Placeholder width
         }
         // Render border
     }
@@ -254,14 +254,13 @@ impl Grid {
 }
 
 impl Component for Grid {
-    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme) {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         for (row_idx, row) in self.children.iter().enumerate() {
             for (col_idx, child_opt) in row.iter().enumerate() {
                 if let Some(child) = child_opt {
-                    let _x = col_idx as f32 * self.spacing;
-                    let _y = row_idx as f32 * self.spacing;
-                    // Position child at (x, y)
-                    child.render(renderer, theme);
+                    let child_x = x + col_idx as f32 * (100.0 + self.spacing);
+                    let child_y = y + row_idx as f32 * (30.0 + self.spacing);
+                    child.render(renderer, theme, child_x, child_y);
                 }
             }
         }
@@ -300,11 +299,11 @@ impl Panel {
 }
 
 impl Component for Panel {
-    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme) {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         // Render border
-        renderer.draw_rect(0.0, 0.0, 200.0, 200.0); // Placeholder
+        renderer.draw_rect(x, y, 200.0, 200.0);
         if let Some(ref child) = self.child {
-            child.render(renderer, theme);
+            child.render(renderer, theme, x + self.padding, y + self.padding);
         }
     }
 
@@ -335,14 +334,14 @@ impl Toggle {
 }
 
 impl Component for Toggle {
-    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme) {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         // Render toggle switch
         let state = if self.is_on.get() { "ON" } else { "OFF" };
-        renderer.draw_text(state, 0.0, 0.0);
+        renderer.draw_text(state, x, y);
     }
 
     fn handle_event(&mut self, event: &Event) {
-        if let Event::Click = event {
+        if let Event::Click { .. } = event {
             let current = self.is_on.get();
             self.is_on.set(!current);
             if let Some(ref mut callback) = self.on_toggle {
@@ -364,17 +363,118 @@ impl Input {
 }
 
 impl Component for Input {
-    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme) {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
         // Render input field with text
-        let text = self.text.get();
-        renderer.draw_text(&text, 0.0, 0.0);
+        let text = if self.text.get().is_empty() { &self.placeholder } else { &self.text.get() };
+        renderer.draw_text(text, x, y);
+        // Draw border
+        renderer.draw_rect(x, y, 200.0, 25.0);
     }
 
     fn handle_event(&mut self, event: &Event) {
-        if let Event::KeyPress(c) = event {
-            let mut current = self.text.get();
-            current.push(*c);
-            self.text.set(current);
+        match event {
+            Event::KeyDown(key) => {
+                match key {
+                    sdl2::keyboard::Keycode::Backspace => {
+                        let mut current = self.text.get();
+                        current.pop();
+                        self.text.set(current);
+                    }
+                    _ => {
+                        if let Some(c) = key.to_string().chars().next() {
+                            if c.is_alphanumeric() || c.is_whitespace() {
+                                let mut current = self.text.get();
+                                current.push(c);
+                                self.text.set(current);
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+pub struct Slider {
+    pub value: Binding<f32>,
+    pub min: f32,
+    pub max: f32,
+    pub on_change: Option<Box<dyn FnMut(f32)>>,
+}
+
+impl Slider {
+    pub fn new(value: Binding<f32>, min: f32, max: f32) -> Self {
+        Slider {
+            value,
+            min,
+            max,
+            on_change: None,
+        }
+    }
+
+    pub fn on_change<F: FnMut(f32) + 'static>(mut self, f: F) -> Self {
+        self.on_change = Some(Box::new(f));
+        self
+    }
+}
+
+impl Component for Slider {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        // Render slider bar and knob
+        renderer.draw_rect(x, y + 10.0, 100.0, 5.0); // Bar
+        let knob_x = x + (self.value.get() - self.min) / (self.max - self.min) * 100.0;
+        renderer.draw_rect(knob_x - 5.0, y, 10.0, 25.0); // Knob
+    }
+
+    fn handle_event(&mut self, event: &Event) {
+        if let Event::Click { x, .. } = event {
+            let new_value = self.min + (*x / 100.0) * (self.max - self.min);
+            let clamped = new_value.max(self.min).min(self.max);
+            self.value.set(clamped);
+            if let Some(ref mut callback) = self.on_change {
+                callback(clamped);
+            }
+        }
+    }
+}
+
+pub struct MenuBar {
+    pub items: Vec<String>,
+    pub on_select: Option<Box<dyn FnMut(usize)>>,
+}
+
+impl MenuBar {
+    pub fn new(items: Vec<String>) -> Self {
+        MenuBar {
+            items,
+            on_select: None,
+        }
+    }
+
+    pub fn on_select<F: FnMut(usize) + 'static>(mut self, f: F) -> Self {
+        self.on_select = Some(Box::new(f));
+        self
+    }
+}
+
+impl Component for MenuBar {
+    fn render(&self, renderer: &mut dyn Renderer, theme: &Theme, x: f32, y: f32) {
+        let mut current_x = x;
+        for item in &self.items {
+            renderer.draw_text(item, current_x, y);
+            current_x += 50.0; // Placeholder width
+        }
+    }
+
+    fn handle_event(&mut self, event: &Event) {
+        if let Event::Click { x, .. } = event {
+            let index = (*x / 50.0) as usize;
+            if index < self.items.len() {
+                if let Some(ref mut callback) = self.on_select {
+                    callback(index);
+                }
+            }
         }
     }
 }
@@ -388,7 +488,8 @@ pub trait Renderer {
 // Placeholder for Event
 pub enum Event {
     Click { x: f32, y: f32 },
-    Hover { x: f32, y: f32 },
+    MouseMove { x: f32, y: f32 },
+    KeyDown(sdl2::keyboard::Keycode),
     KeyPress(char),
     Drag { dx: f32, dy: f32 },
 }
