@@ -2,21 +2,26 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::Canvas;
+use sdl2::render::{Canvas, TextureCreator};
 use sdl2::video::Window;
 use sdl2::Sdl;
+use sdl2::ttf::Sdl2TtfContext;
 
 use crate::components::{Component, Renderer as UIRenderer};
+use crate::themes::Theme;
 
 pub struct SDLEngine {
     sdl_context: Sdl,
     canvas: Canvas<Window>,
+    ttf_context: Sdl2TtfContext,
+    font: sdl2::ttf::Font<'static, 'static>,
 }
 
 impl SDLEngine {
     pub fn new(title: &str, width: u32, height: u32) -> Result<Self, String> {
         let sdl_context = sdl2::init()?;
         let video_subsystem = sdl_context.video()?;
+        let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
 
         let window = video_subsystem
             .window(title, width, height)
@@ -29,10 +34,11 @@ impl SDLEngine {
         Ok(SDLEngine {
             sdl_context,
             canvas,
+            ttf_context,
         })
     }
 
-    pub fn run(&mut self, mut root_component: Box<dyn Component>) -> Result<(), String> {
+    pub fn run(&mut self, mut root_component: Box<dyn Component>, theme: &Theme) -> Result<(), String> {
         let mut event_pump = self.sdl_context.event_pump()?;
 
         'running: loop {
@@ -54,7 +60,7 @@ impl SDLEngine {
             self.canvas.set_draw_color(Color::RGB(255, 255, 255));
             self.canvas.clear();
 
-            root_component.render(&mut SDLRenderer { canvas: &mut self.canvas });
+            root_component.render(&mut SDLRenderer { canvas: &mut self.canvas }, theme);
 
             self.canvas.present();
         }
@@ -64,8 +70,8 @@ impl SDLEngine {
 
     fn convert_event(&self, event: &Event) -> crate::components::Event {
         match event {
-            Event::MouseButtonDown { .. } => crate::components::Event::Click,
-            Event::MouseMotion { .. } => crate::components::Event::Hover,
+            Event::MouseButtonDown { x, y, .. } => crate::components::Event::Click { x: *x as f32, y: *y as f32 },
+            Event::MouseMotion { x, y, .. } => crate::components::Event::Hover { x: *x as f32, y: *y as f32 },
             Event::KeyDown { keycode: Some(key), .. } => {
                 if let Some(c) = key.to_string().chars().next() {
                     crate::components::Event::KeyPress(c)
@@ -73,13 +79,15 @@ impl SDLEngine {
                     crate::components::Event::KeyPress(' ')
                 }
             }
-            _ => crate::components::Event::Click, // Default
+            _ => crate::components::Event::Click { x: 0.0, y: 0.0 }, // Default
         }
     }
 }
 
 struct SDLRenderer<'a> {
     canvas: &'a mut Canvas<Window>,
+    texture_creator: &'a TextureCreator<sdl2::video::WindowContext>,
+    font: &'a sdl2::ttf::Font<'a, 'a>,
 }
 
 impl<'a> UIRenderer for SDLRenderer<'a> {

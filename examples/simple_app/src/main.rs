@@ -1,6 +1,7 @@
 use oblivion_ui::components::{Window, VStack, Button, Label};
 use oblivion_ui::state::State;
 use oblivion_ui::rendering::SDLEngine;
+use oblivion_ui::themes::Theme;
 
 fn main() -> Result<(), String> {
     let counter = State::new("0".to_string());
@@ -20,6 +21,7 @@ fn main() -> Result<(), String> {
 
     window.add_child(Box::new(vstack));
 
+    let theme = Theme::default();
     let mut engine = SDLEngine::new("Simple App", 800, 600)?;
-    engine.run(Box::new(window))
+    engine.run(Box::new(window), &theme)
 }
